@@ -21,8 +21,10 @@ namespace WPF_Extensions
         {
             var metadataReferences = new[]
             {
-                typeof(Expression).GetTypeInfo().Assembly,  // WindowsBase.dll
-                typeof(object).GetTypeInfo().Assembly,      // mscorlib.dll
+                typeof(Expression).GetTypeInfo().Assembly,        // WindowsBase.dll
+                typeof(UIElement).GetTypeInfo().Assembly,         // PresentationCore.dll
+                typeof(FrameworkElement).GetTypeInfo().Assembly,  // PresentationFramework.dll
+                typeof(object).GetTypeInfo().Assembly,            // mscorlib.dll
             }.Select(x => MetadataReference.CreateFromFile(x.Location)).ToList();
 
             var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary).
@@ -31,10 +33,9 @@ namespace WPF_Extensions
             var topLevelBinderFlagsProperty = typeof(CSharpCompilationOptions).GetProperty("TopLevelBinderFlags", BindingFlags.Instance | BindingFlags.NonPublic);
             topLevelBinderFlagsProperty.SetValue(compilationOptions, (uint)1 << 22);
 
-            var code = File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "ExpressionBase.cs"));
             var compilation = CSharpCompilation.Create(
                 "WPFExtensions",
-                new[] { CSharpSyntaxTree.ParseText(code) },
+                GatherCodeCompilationUnits(),
                 metadataReferences,
                 compilationOptions);
 
@@ -76,6 +77,15 @@ namespace WPF_Extensions
             }
 
             File.Delete("WPFExtensionsTmp.dll");
+        }
+
+        private static SyntaxTree[] GatherCodeCompilationUnits()
+        {
+            return new SyntaxTree[]
+            {
+                CSharpSyntaxTree.ParseText(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "DpiHelper.cs"))),
+                CSharpSyntaxTree.ParseText(File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "ExpressionBase.cs")))
+            };
         }
 
         private static AssemblyDefinition GetWindowsBaseDefinition()
